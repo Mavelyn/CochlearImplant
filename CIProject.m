@@ -70,8 +70,8 @@ sound(signal(time),sampleRate);
 
 % Plot two cycles of its waveform as a function of time
 figure()
-time2 = 0:1/sampleRate:2*period(freq);
-plot(signal(time2));
+time2 = 0:period(sampleRate):2*period(freq);
+plot(time2, signal(time2));
 ylabel('Amplitude');
 xlabel('Time (s)');
 

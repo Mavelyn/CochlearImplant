@@ -6,21 +6,23 @@ filepath = 'C:\Users\mavel\Documents\BME 252\CI Project\.wav Files\';
 %soundFiles = soundFiles(3:end);
 
 soundFile = 'test.wav';
-newSoundFile = 'Test1.wav';
+%newSoundFile = 'Test1.wav';
 
 % Read sound file and find sampling rate
-filename = append(filepath, soundFile);
-processSound(filename);
+%filename = append(filepath, soundFile);
+processSound(filepath, soundFile);
 
 %% Processes sound file and plots waveform
-function processSound(filename)
+function processSound(filepath, soundFile)
+
+filename = append(filepath, soundFile);
 
 % Read sound file
 [oldAudioData,sampleRate] = audioread(filename);
 
 % Check whether input sound is stereo or mono
 % Can also use audioinfo instead
-[m, n] = size(oldAudioData);
+[~, n] = size(oldAudioData);
 
 % If stereo, add 2 columns to make 1 column
 if n == 2
@@ -30,23 +32,23 @@ else
 end
 
 % Update size
-clear m n;
+clear n;
 [m, n] = size(audioData);
 
 % Play sound (updated)
 sound(audioData,sampleRate);
 
 % Create a new .wav file using y (audio data) and Fs (sample rate, Hz)
-name = split(filename, '.');
-name = name(1,1);new_name = strcat(name,'-out','.wav');
-new_name_char = char(new_name);
-audiowrite(new_name_char, audioData, sampleRate);
+name = strsplit(soundFile, '.');
+name = string(name(1));
+newFilename = append(name,'-out','.wav');
+audiowrite(newFilename, audioData, sampleRate);
 
 % Plot sound waveform as a function of sample number
 figure()
 soundWaveform = plot(audioData);
 xlabel('Sample Number');
-ylabel('Audio Signal');
+ylabel('Amplitude');
 
 % If sampling rate is not 16 kHz, downsample to 16 kHz
 if sampleRate > 16000
@@ -68,9 +70,10 @@ sound(signal(time),sampleRate);
 
 % Plot two cycles of its waveform as a function of time
 figure()
-time2 = 0:0.0000001:2*period(freq);
+time2 = 0:1/sampleRate:2*period(freq);
 plot(signal(time2));
-xlabel('Time');
+ylabel('Amplitude');
+xlabel('Time (s)');
 
 end
 

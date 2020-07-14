@@ -5,7 +5,7 @@ filepath = 'C:\Users\mavel\Documents\BME 252\CI Project\.wav Files\';
 %soundFiles = {dir(filepath).name};
 %soundFiles = soundFiles(3:end);
 
-soundFile = 'MaleClear.wav';
+soundFile = 'fo-4.wav';
 %newSoundFile = 'Test1.wav';
 
 % Read sound file and find sampling rate
@@ -13,7 +13,7 @@ soundFile = 'MaleClear.wav';
 processSound(filepath, soundFile);
 
 %% Processes sound file and plots waveform
-function processSound(filepath, soundFile)
+function [high] = processSound(filepath, soundFile)
 
 filename = append(filepath, soundFile);
 
@@ -47,7 +47,7 @@ audiowrite(newFilename, audioData, sampleRate);
 % Plot sound waveform as a function of sample number
 figure()
 soundWaveform = plot(audioData);
-title();
+title('Sound Waveform');
 xlabel('Sample Number');
 ylabel('Amplitude');
 
@@ -80,56 +80,67 @@ end
 
 % N is the number of channels
 N = 79;
-
+spacing = 100;
 % Create a cell array to store the output signals of each channel
-filteredSignal = cell(N,1);
+%filteredSignal = cell(N,1);
 
 % Initialize cutoff frequencies for bandpass filter
-low = 100;
-high = 200;
+%low = 100;
+%high = 200;
+outputSignal = 0;
 
-% Bandpass Filter Bank
-for i = 1:N
-    filteredSignal{i} = butterBandpassFilter(audioData, low, high, sampleRate, 5);
-    low = low + 100;
-    high = high + 100;
-end
-
-% Plot the output signal of the lowest frequency channel
-figure()
-plot(filteredSignal{1});
-title('Output signal of Lowest Frequency Channel');
-xlabel('Sample Number');
-ylabel('Amplitude');
-
-% Plot the output signal of the highest frequency channel
-figure()
-plot(filteredSignal{16});
-title('Output signal of Highest Frequency Channel');
-xlabel('Sample Number');
-ylabel('Amplitude');
-
-% Create cell array for envelopes of each channel
-envelope = cell(N,1);
-
-% Envelope extraction
-for i = 1:N
-    % Rectify output signals of all bandpass filters
-    filteredSignal{i} = abs(filteredSignal{1});
+for i = 1:N     
+    % Increment the lower and upper cutoff frequencies by 100 Hz
+    low = 100 + (i-1)*spacing;
+    high = 200 + (i-1)*spacing;
     
-    % Detect envelopes using lowpass filter with 400 Hz cutoff
-    envelope{i} = butterLowpassFilter(filteredSignal{1}, 400, sampleRate, 5);
+    % BANDPASS FILTER
+    filteredSignal = butterBandpassFilter(audioData, low, high, sampleRate, 5);
+    centralFreq = (low + high) / 2;
+    
+    % ENVELOPE DETECTION
+    % Rectify output signal
+    rectifiedSignal = abs(filteredSignal);
+    
+    % Detect envelopes of rectified signals using a lowpass filter
+    envelope = butterLowpassFilter(rectifiedSignal, 400, sampleRate, 5);
+    
+    % Plotting
+    if i == 1
+        figure()   
+        plot(filteredSignal);
+        title('Output Signal of Lowest Frequency Channel');
+        xlabel('Sample Number');
+        ylabel('Amplitude');
+        
+        figure()
+        plot(envelope);
+        title('Envelope of Lowest Frequency Channel');
+        
+    elseif i == N
+        figure()   
+        plot(filteredSignal);
+        title('Output Signal of Highest Frequency Channel');
+        xlabel('Sample Number');
+        ylabel('Amplitude');
+        
+        figure()
+        plot(envelope);
+        title('Envelope of Highest Frequency Channel');
+    end
+    
+    % Generate cosine signal with central frequency of bandpass
+    % filters and length of rectified signal
+    [r, ~] = size(rectifiedSignal);
+    timeDuration = r/sampleRate;
+    time = linspace(0, timeDuration, r);
+    cosSignal = cos(2*pi*centralFreq*time);
+    
+    % AMPLITUDE MODULATION
+   % amSignal = envelope.*cosSignal;
+    
+    %outputSignal = outputSignal + amSignal;
 end
-
-% Plot envelope of lowest frequency channel
-figure()
-plot(envelope{1});
-title('Envelope of Lowest Frequency Channel');
-
-% Plot envelope of highest frequency channel
-figure()
-plot(envelope{16});
-title('Envelope of Highest Frequency Channel');
 
 end
 
@@ -139,8 +150,8 @@ function[y] = butterBandpassFilter(data, lowcut, highcut, fs, order)
 
     % Since the cutoff frequency cannot be equal to 1 and nyq = 8000,
     % the upper cutoff frequency must be less than 8000
-    if highcut == 8000
-        highcut = 7999.999999999;
+    if highcut == nyq
+        highcut = highcut - 0.00000000001;
     end
     
     % Normalize the frequencies by dividing by the Nyquist frequency
@@ -155,6 +166,10 @@ end
 function[y] = butterLowpassFilter(data, cutoff, fs, order)
     % Nyquist frequency 
     nyq = 0.5*fs;
+    
+    if cutoff == nyq
+        cutoff = cuttoff - 0.00000000001;
+    end
     
     % Normalize the cutoff frequency
     cutoffFreq = cutoff / nyq;

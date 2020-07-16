@@ -9,11 +9,15 @@ soundFile = 'fo-4.wav';
 %newSoundFile = 'Test1.wav';
 
 % Read sound file and find sampling rate
-%filename = append(filepath, soundFile);
+filename = append(filepath, soundFile);
 processSound(filepath, soundFile);
 
+%audioData = processSound(filepath, soundFile);
+%filteredSignal = butterBandpassFilter(audioData, 7800, 7999.99, 16000, 6);
+%plot(filteredSignal);
+
 %% Processes sound file and plots waveform
-function [high] = processSound(filepath, soundFile)
+function[audioData] = processSound(filepath, soundFile)
 
 filename = append(filepath, soundFile);
 
@@ -36,7 +40,7 @@ clear n;
 [m, n] = size(audioData);
 
 % Play sound (updated)
-sound(audioData,sampleRate);
+%sound(audioData,sampleRate);
 
 % Create a new .wav file using y (audio data) and Fs (sample rate, Hz)
 name = strsplit(soundFile, '.');
@@ -79,23 +83,26 @@ end
 %xlabel('Time (s)');
 
 % N is the number of channels
-N = 79;
-spacing = 100;
-% Create a cell array to store the output signals of each channel
-%filteredSignal = cell(N,1);
+N = 16;
+spacing = 500;
 
 % Initialize cutoff frequencies for bandpass filter
 %low = 100;
 %high = 200;
 outputSignal = 0;
 
-for i = 1:N     
-    % Increment the lower and upper cutoff frequencies by 100 Hz
-    low = 100 + (i-1)*spacing;
-    high = 200 + (i-1)*spacing;
+for i = 1:N    
+    % Increment the lower and upper cutoff frequencies
+    if i == 1
+        low = 100;
+        high = 500;
+    else
+        low = 500 + (i-2)*spacing;
+        high = low + spacing;
+    end
     
     % BANDPASS FILTER
-    filteredSignal = butterBandpassFilter(audioData, low, high, sampleRate, 5);
+    filteredSignal = butterBandpassFilter(audioData, low, high, sampleRate, 2);
     centralFreq = (low + high) / 2;
     
     % ENVELOPE DETECTION
@@ -103,9 +110,22 @@ for i = 1:N
     rectifiedSignal = abs(filteredSignal);
     
     % Detect envelopes of rectified signals using a lowpass filter
-    envelope = butterLowpassFilter(rectifiedSignal, 400, sampleRate, 5);
+    envelope = butterLowpassFilter(rectifiedSignal, 400, sampleRate, 2);
     
-    % Plotting
+    % Generate cosine signal with central frequency of bandpass
+    % filters and length of rectified signal
+    [r, ~] = size(rectifiedSignal);
+    timeDuration = r/sampleRate;
+    time = linspace(0, timeDuration, r);
+    cosSignal = cos(2*pi*centralFreq*time);
+    
+    % AMPLITUDE MODULATION
+    envelope = transpose(envelope);
+    amSignal = envelope.*(cosSignal);
+    
+    outputSignal = outputSignal + amSignal;
+    
+        % Plotting
     if i == 1
         figure()   
         plot(filteredSignal);
@@ -116,6 +136,7 @@ for i = 1:N
         figure()
         plot(envelope);
         title('Envelope of Lowest Frequency Channel');
+        xlabel('Sample Number');
         
     elseif i == N
         figure()   
@@ -127,26 +148,27 @@ for i = 1:N
         figure()
         plot(envelope);
         title('Envelope of Highest Frequency Channel');
+        xlabel('Sample Number');
     end
-    
-    % Generate cosine signal with central frequency of bandpass
-    % filters and length of rectified signal
-    [r, ~] = size(rectifiedSignal);
-    timeDuration = r/sampleRate;
-    time = linspace(0, timeDuration, r);
-    cosSignal = cos(2*pi*centralFreq*time);
-    
-    % AMPLITUDE MODULATION
-   % amSignal = envelope.*cosSignal;
-    
-    %outputSignal = outputSignal + amSignal;
+        
 end
+
+% Normalize the output signal by the max of its absolute value
+outputSignal = outputSignal / max(abs(outputSignal), [], 'all');
+
+% Plot the output signal
+figure()
+plot(time, outputSignal);
+title('Output Signal');
+
+% Play the output signal
+sound(outputSignal, sampleRate);
 
 end
 
 function[y] = butterBandpassFilter(data, lowcut, highcut, fs, order)
     % Nyquist frequency
-    nyq = 0.5*fs;
+    nyq = fs/2;
 
     % Since the cutoff frequency cannot be equal to 1 and nyq = 8000,
     % the upper cutoff frequency must be less than 8000
@@ -155,8 +177,8 @@ function[y] = butterBandpassFilter(data, lowcut, highcut, fs, order)
     end
     
     % Normalize the frequencies by dividing by the Nyquist frequency
-    low = lowcut / nyq;
-    high = highcut / nyq;
+    low = lowcut/nyq;
+    high = highcut/nyq;
     
     % butter() returns b,a which are transfer function coefficients
     [b, a] = butter(order, [low, high], 'bandpass');

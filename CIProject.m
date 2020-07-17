@@ -99,7 +99,8 @@ for i = 1:N
     end
     
     % BANDPASS FILTER
-    filteredSignal = butterBandpassFilter(audioData, low, high, sampleRate, 2);
+    filterOrder = 2;
+    filteredSignal = butterBandpassFilter(audioData, low, high, sampleRate, filterOrder);
     centralFreq = (low + high) / 2;
     
     % ENVELOPE DETECTION
@@ -107,7 +108,7 @@ for i = 1:N
     rectifiedSignal = abs(filteredSignal);
     
     % Detect envelopes of rectified signals using a lowpass filter
-    envelope = butterLowpassFilter(rectifiedSignal, 300, sampleRate, 2);
+    envelope = butterLowpassFilter(rectifiedSignal, 300, sampleRate, filterOrder);
     
     % Generate cosine signal with central frequency of bandpass
     % filters and length of rectified signal

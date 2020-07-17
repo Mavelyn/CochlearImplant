@@ -17,7 +17,7 @@ processSound(filepath, soundFile);
 %plot(filteredSignal);
 
 %% Processes sound file and plots waveform
-function[audioData] = processSound(filepath, soundFile)
+function processSound(filepath, soundFile)
 
 filename = append(filepath, soundFile);
 
@@ -50,7 +50,7 @@ audiowrite(newFilename, audioData, sampleRate);
 
 % Plot sound waveform as a function of sample number
 figure()
-soundWaveform = plot(audioData);
+plot(audioData);
 title('Sound Waveform');
 xlabel('Sample Number');
 ylabel('Amplitude');
@@ -82,17 +82,14 @@ end
 %ylabel('Amplitude');
 %xlabel('Time (s)');
 
-% N is the number of channels
+% Set number of channels and channel spacing
 N = 16;
 spacing = 500;
 
-% Initialize cutoff frequencies for bandpass filter
-%low = 100;
-%high = 200;
 outputSignal = 0;
 
 for i = 1:N    
-    % Increment the lower and upper cutoff frequencies
+    % Set lower and upper corner frequency of bandpass filter
     if i == 1
         low = 100;
         high = 500;
@@ -110,7 +107,7 @@ for i = 1:N
     rectifiedSignal = abs(filteredSignal);
     
     % Detect envelopes of rectified signals using a lowpass filter
-    envelope = butterLowpassFilter(rectifiedSignal, 400, sampleRate, 2);
+    envelope = butterLowpassFilter(rectifiedSignal, 300, sampleRate, 2);
     
     % Generate cosine signal with central frequency of bandpass
     % filters and length of rectified signal
@@ -123,9 +120,10 @@ for i = 1:N
     envelope = transpose(envelope);
     amSignal = envelope.*(cosSignal);
     
+    % Sum amplitude modulated signals for each channel
     outputSignal = outputSignal + amSignal;
     
-        % Plotting
+    % Plotting
     if i == 1
         figure()   
         plot(filteredSignal);
@@ -153,22 +151,33 @@ for i = 1:N
         
 end
 
-% Normalize the output signal by the max of its absolute value
-outputSignal = outputSignal / max(abs(outputSignal), [], 'all');
+% Normalize the signals by the max of their absolute value
+outputSignalNorm = outputSignal / max(abs(outputSignal), [], 'all');
+audioDataNorm = audioData / max(abs(audioData), [], 'all');
 
-% Plot the output signal
+% Plot the normalized output signal
 figure()
-plot(time, outputSignal);
+plot(outputSignalNorm);
 title('Output Signal');
+xlabel('Sample Number');
+ylabel('Amplitude');
+
+% Plot the normalized input signal
+figure()
+plot(time, audioDataNorm);
+hold on;
+plot(time, outputSignalNorm);
+title('Original vs Processed Sound');
+legend('Original', 'Processed');
 
 % Play the output signal
 sound(outputSignal, sampleRate);
 
 end
 
-function[y] = butterBandpassFilter(data, lowcut, highcut, fs, order)
+function[y] = butterBandpassFilter(data, lowcut, highcut, sampleRate, order)
     % Nyquist frequency
-    nyq = fs/2;
+    nyq = sampleRate/2;
 
     % Since the cutoff frequency cannot be equal to 1 and nyq = 8000,
     % the upper cutoff frequency must be less than 8000
@@ -185,10 +194,12 @@ function[y] = butterBandpassFilter(data, lowcut, highcut, fs, order)
     y = filter(b, a, data);
 end
 
-function[y] = butterLowpassFilter(data, cutoff, fs, order)
+function[y] = butterLowpassFilter(data, cutoff, sampleRate, order)
     % Nyquist frequency 
-    nyq = 0.5*fs;
+    nyq = sampleRate/2;
     
+    % Cutoff frequency cannot equal Nyquist frequency
+    % so decrease slightly
     if cutoff == nyq
         cutoff = cuttoff - 0.00000000001;
     end

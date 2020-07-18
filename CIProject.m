@@ -108,7 +108,7 @@ for i = 1:N
     rectifiedSignal = abs(filteredSignal);
     
     % Detect envelopes of rectified signals using a lowpass filter
-    envelope = butterLowpassFilter(rectifiedSignal, 300, sampleRate, filterOrder);
+    envelope = butterLowpassFilter(rectifiedSignal, 400, sampleRate, filterOrder);
     
     % Generate cosine signal with central frequency of bandpass
     % filters and length of rectified signal
